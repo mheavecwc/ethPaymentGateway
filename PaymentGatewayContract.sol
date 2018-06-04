@@ -6,10 +6,9 @@ contract PaymentGatewayContract is Owned{
     uint gatewayBalance;
     mapping(address => Merchant) merchants;
     mapping (address=> PaymentTx) payments;
-    mapping(address => uint) balances;
 
     
-    event TxReceived(PaymentTx paymentTx);
+    event WithdrawPaymentEvent(address _walletAddress, uint _amount);
 
     constructor() public {
         gatewayWalletAddress = msg.sender;
@@ -40,15 +39,15 @@ contract PaymentGatewayContract is Owned{
     }
     
     function withdrawPayment(address _merchantAddress) onlyOwner public{
-        uint merchBalance = balances[_merchantAddress];
+        uint merchBalance = merchants[_merchantAddress].balance;
+        emit WithdrawPaymentEvent(_merchantAddress, merchBalance);
         _merchantAddress.transfer(merchBalance);
-        balances[_merchantAddress] = 0;
+        merchants[_merchantAddress].balance = 0;
     }
 
     function withdrawGatewayFees() onlyOwner public{
-        uint gatewayFeeBalance = balances[gatewayWalletAddress];
-        gatewayWalletAddress.transfer(gatewayFeeBalance);
-        balances[gatewayWalletAddress] = 0;
+        gatewayWalletAddress.transfer(gatewayBalance);
+        gatewayBalance = 0;
     }
 
     struct Merchant{
