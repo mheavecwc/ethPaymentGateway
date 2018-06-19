@@ -1,0 +1,47 @@
+{
+  "name": "ethpaymentgateway",
+  "version": "1.0.0",
+  "description": "Ether payment gateway",
+  "main": "truffle.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@types/web3": "^1.0.0",
+    "babel-runtime": "^6.26.0",
+    "ethjs-abi": "^0.2.1",
+    "file-loader": "^1.1.11",
+    "npx": "^10.2.0",
+    "web3-typescript-typings": "^0.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^10.3.1",
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-0": "^6.24.1",
+    "webpack": "^2.1.0-beta.22",
+    "webpack-cli": "^3.0.3"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "webpack": "webpack --display-error-details",
+    "babel": "babel --plugins transform-async-to-generator ui/src/EthPaymentGateway.js --out-file ui/src/EthPaymentGateway-transpiled.js",
+    "build": "babel --plugins transform-async-to-generator ui/src/EthPaymentGateway.js --out-file ui/src/EthPaymentGateway-transpiled.js && webpack --display-error-details"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mheavecwc/ethPaymentGateway.git"
+  },
+  "author": "Mark Heaver",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mheavecwc/ethPaymentGateway/issues"
+  },
+  "homepage": "https://github.com/mheavecwc/ethPaymentGateway#readme"
+}

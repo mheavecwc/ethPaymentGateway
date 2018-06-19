@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <link type="text/css" rel="stylesheet" href="contents/bootstrap.min.css" />
+    <script type="text/javascript" src="contents/knockout-min.js"></script>
+    <script type="text/javascript" src="contents/web3.min.js"></script>
+    <script type="text/javascript" src="contents/gateway.js"></script>
+
+    <title></title>
+</head>
+<body>
+<div class="container">
+    <h2>Eth Payment Gateway - test</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Price conversion</h5>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">£</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: itemPrice" aria-label="Amount (in GBP)">
+                <span class="input-group-text"> --- </span>
+                <input type="text" class="form-control" disabled data-bind="value: priceInEth" aria-label="Amount (in Ether)">                
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: calculatePrice}">Get Ether price</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Add merchant</div>
+            <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Merchant address</span>
+                    </div>
+                    <input type="text" class="form-control" data-bind="value: merchantAddress"/>
+            </div>
+            </br>
+            <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: addMerchant}">Add merchant</button>
+        </div>
+    </div>
+
+
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Make payment</div>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Merchant address</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: paymentAddress"/>
+            </div>
+            </br>            
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Amount to pay</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: priceInEth"/>
+            </div>   
+            <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Reference</span>
+                    </div>
+                    <input type="text" class="form-control" data-bind="value: paymentRef"/>
+                </div>                      
+            <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: makePayment}">Make payment</button>        
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Withdrawals</div>
+            <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Merchant address</span>
+                    </div>
+                    <input type="text" class="form-control" data-bind="value: withdrawalAddress"/>
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: withdrawMerchant}">withdraw</button>  
+                    </div>
+                </div>
+                <br>
+                <button type="button" class="btn btn-lg btn-outline-secondary" data-bind="event: { click: withdrawGatewayFees}">withdraw gateway fees</button>  
+                <br>
+                <button type="button" class="btn btn-lg btn-outline-secondary" data-bind="event: { click: getGatewayWithdrawalHistory}">get gateway withdrawal history</button>     
+                <br>
+                <button type="button" class="btn btn-lg btn-outline-secondary" data-bind="event: { click: getMerchantWithdrawalHistory}">get merchant withdrawal history</button>                               
+        </div>
+
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Check payment</div>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Tx Hash</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: txHash"/>
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: checkTxStatus}">Check Status</button>  
+                </div>                
+            </div>
+
+
+
+        </div>
+
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Check using merchant and ref</div>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Merchant address</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: lookupMerch"/>
+            </div>
+            </br>            
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Reference</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: lookupRef"/>
+            </div> 
+            </br>
+            <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: checkPayment}">Check payment</button>  
+            
+        </div>
+    </div>
+
+
+
+</div>
+
+    <script>      
+            var gatewayyy;
+
+            function EthPaymentGatewayViewModel(){
+                var self = this;
+                self.itemPrice = ko.observable(100);
+                self.priceInEth = ko.observable(0);
+                self.paymentRef = ko.observable("");
+                self.txRef = ko.observable("");
+                self.merchantAddress = ko.observable("");                
+                self.paymentAddress = ko.observable("");
+                self.withdrawalAddress = ko.observable("");
+                self.txHash = ko.observable("");
+                self.lookupMerch = ko.observable("")
+                self.lookupRef = ko.observable("")
+
+                self.gateway = new EthPaymentGatewayLib.EthPaymentGateway("http://localhost:7545", "0x4cd2fe7b0b2edfcc9847c02b6a3ddeaa00ad5982");
+                gatewayyy = self.gateway;
+
+                self.calculatePrice = async function(){
+                    let price = await self.gateway.getCostInWeiFromCostInGbp(self.itemPrice());
+                    self.priceInEth(price);
+                }
+
+                self.addMerchant = async function(){
+                    console.log("event click");
+                    var result = await self.gateway.addMerchant(self.merchantAddress());
+                    console.log(result);
+                }
+
+                self.makePayment = async function(){
+                    console.log("make payment");
+                    var result = await self.gateway.makePayment(self.paymentAddress(), self.priceInEth(), self.paymentRef());
+                    console.log("payment made");
+                    console.log(result);
+                }
+
+                self.withdrawMerchant = async function(){
+                    console.log("withdraw for merchant");
+                    let tx = await self.gateway.withdrawMerchantBalance(self.withdrawalAddress());
+                    console.log(tx);
+                }
+
+                self.withdrawGatewayFees = async function(){
+                    console.log("withdraw gateway fees");
+                    let tx = await self.gateway.withdrawGatewayFees();
+                    console.log(tx);                    
+                }
+
+                self.checkTxStatus = async function(){
+                    console.log("checking status of tx:" + self.txHash());
+                    let status = await self.gateway.getPaymentReceivedStatusFromHash(self.txHash());
+                    console.log(status);
+                }
+
+                self.checkPayment = async function(){
+                    console.log("Checking payment status:" + self.lookupMerch() + ", " + self.lookupRef());
+                    let status = await self.gateway.getPaymentStatusFromMerchantAndReference(self.lookupMerch(), self.lookupRef());
+                    console.log(status);                    
+                }
+
+                self.getMerchantWithdrawalHistory = async function(){
+                    console.log("getting merchant withdrawal history...");
+                    let withdrawals = await self.gateway.getMerchantWithdrawalHistory();
+                    console.log(withdrawals);
+                }                
+
+                self.getGatewayWithdrawalHistory = async function(){
+                    console.log("getting gateway withdrawal history...");
+                    let withdrawals = await self.gateway.getGatewayWithdrawalHistory();
+                    console.log(withdrawals);
+                }
+            }
+            
+            ko.applyBindings(new EthPaymentGatewayViewModel())
+        </script>    
+</body>
+</html>
