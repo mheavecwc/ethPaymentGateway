@@ -1,39 +1,57 @@
 pragma solidity ^0.4.23;
 import "./math/SafeMath.sol";
 import "./ownership/Ownable.sol";
-
+import "./GatewayERC20Contract.sol";
 
 contract PaymentGatewayContract is Ownable{
     using SafeMath for uint256;
-    uint gatewayFeePercentage = 10;
+    uint gatewayFeePercentage;
     uint256 gatewayBalance;
     mapping(address => Merchant) merchants;
 
-    event AddMerchantEvent(string description, Merchant merchant);
-    event PaymentMadeEvent(string description, address _merchant, uint _amount);
-    event WithdrawPaymentEvent(string description, address _walletAddress, uint _amount);
+    GatewayERC20Contract tokenContract;
+
+    event AddMerchantEvent(address merchant);
+    event PaymentMadeEvent(address _merchant, string _reference, uint _amount);
+    event PaymentMadeInTokensEvent(address _merchant, string _reference, uint _tokenAmount);
+    event WithdrawGatewayFundsEvent(address _walletAddress, uint _amount);
+    event WithdrawPaymentEvent(address _walletAddress, uint _amount);
 
     constructor() public {
-        owner = msg.sender;
+        gatewayFeePercentage = 10;
         gatewayBalance = 0;
-        owner = msg.sender;
     }
 
-    function addMerchant(address _walletAddress, string _name) public onlyOwner {
+    function setTokenContract(address _tokenContractAddress) public onlyOwner{
+        tokenContract = GatewayERC20Contract(_tokenContractAddress);
+    }
+
+    function issueTokens(address _recipient, uint _amount) public onlyOwner{
+        tokenContract.issueTokens(_recipient, _amount);
+    }
+
+
+    function addMerchant(address _walletAddress) public onlyOwner {
         require(!isExistingMerchant(_walletAddress));
-        Merchant memory newMerchant = Merchant({ name: _name, balance: 0, created: true});
+        Merchant memory newMerchant = Merchant({ balance: 0, created: true});
         merchants[_walletAddress] = newMerchant;
-        emit AddMerchantEvent("New merchant added", newMerchant);
+        emit AddMerchantEvent(_walletAddress);
     }
 
-    function makePayment(address _merchantAddress) payable public{
+    function makePayment(address _merchantAddress, string _reference) payable allowedToMakePayment(_merchantAddress, _reference) public{
         uint gatewayFee = calculateGatewayFee(msg.value);
         gatewayBalance = SafeMath.add(gatewayBalance, gatewayFee);
 
         uint merchantPayment = SafeMath.sub(msg.value, gatewayFee);
         addPaymentToMerchantBalance(_merchantAddress, merchantPayment);
 
-        emit PaymentMadeEvent("Payment made", _merchantAddress, msg.value);
+        emit PaymentMadeEvent(_merchantAddress, _reference, msg.value);
+    }
+
+    function makePaymentInTokens(address _merchantAddress, string _reference, uint _tokenAmount) 
+        allowedToMakePayment(_merchantAddress, _reference) public{
+        tokenContract.gatewayTokenTransfer(msg.sender, _merchantAddress, _tokenAmount);
+        emit PaymentMadeInTokensEvent(_merchantAddress, _reference, _tokenAmount);
     }
 
     function addPaymentToMerchantBalance(address _merchantAddress, uint256 _paymentAmount) private {
@@ -42,23 +60,30 @@ contract PaymentGatewayContract is Ownable{
     }
 
     function withdrawPayment(address _merchantAddress) public{
-        require(permittedToWithdraw(_merchantAddress));
+        require(permittedToAccessAccount(_merchantAddress));
         uint merchBalance = merchants[_merchantAddress].balance;
         _merchantAddress.transfer(merchBalance);
         merchants[_merchantAddress].balance = 0;
-        emit WithdrawPaymentEvent("Merchant payment withdrawal", _merchantAddress, merchBalance);
+        emit WithdrawPaymentEvent(_merchantAddress, merchBalance);
+    }
+
+    // Fees
+    function setGatewayFee(uint _newFee) onlyOwner public{
+        require(_newFee < 100);
+        gatewayFeePercentage = _newFee;
     }
 
     function withdrawGatewayFees() onlyOwner public{
         owner.transfer(gatewayBalance);
+        emit WithdrawGatewayFundsEvent(owner, gatewayBalance);                
         gatewayBalance = 0;
-        emit WithdrawPaymentEvent("Gateway payment withdrawal", owner, gatewayBalance);        
     }
 
     // Read only functions
-    function getMerchant(address _merchantAddress) public view returns(string name, uint balance){
+    function getMerchantBalance(address _merchantAddress) public view returns(address, uint){
+        require(permittedToAccessAccount(_merchantAddress));        
         Merchant memory merchant = merchants[_merchantAddress];
-        return (merchant.name, merchant.balance);
+        return (_merchantAddress, merchant.balance);
     }
 
     function getGatewayBalance() public onlyOwner view returns(uint){
@@ -71,7 +96,7 @@ contract PaymentGatewayContract is Ownable{
     }
 
     // Require functions
-    function permittedToWithdraw(address _address) private view returns (bool valid){
+    function permittedToAccessAccount(address _address) private view returns (bool valid){
         if(msg.sender == owner){
             return true;
         }
@@ -82,8 +107,26 @@ contract PaymentGatewayContract is Ownable{
         return merchants[_merchantAddress].created;
     }
 
+    function isStringEqual(string _input_a, string _input_b) private pure returns(bool){
+        return keccakHash(_input_a) == keccakHash(_input_b);
+    }
+
+    function isStringEmpty(string _input) private pure returns(bool){
+        return keccakHash(_input) == keccakHash("");
+    }
+
+
+    function keccakHash(string _input) private pure returns (bytes32){
+        return keccak256(abi.encodePacked(_input));
+    }
+
+    modifier allowedToMakePayment(address _merchant, string _reference){
+        require(!isStringEmpty(_reference));
+        require(isExistingMerchant(_merchant));
+        _;
+    }
+
     struct Merchant{
-        string name;
         uint balance;
         bool created;
     }
