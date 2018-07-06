@@ -74,6 +74,34 @@
         </div>
     </div>
 
+
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Make payment in tokens</div>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Merchant address</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: tokenPaymentAddress"/>
+            </div>
+            </br>            
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Amount to pay</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: noOfTokens"/>
+            </div>   
+            <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Reference</span>
+                    </div>
+                    <input type="text" class="form-control" data-bind="value: tokenPaymentRef"/>
+                </div>                      
+            <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: makePaymentUsingTokens}">Make payment</button>        
+        </div>
+    </div>
+
+
     <div class="card">
         <div class="card-body">
             <div class="card-title">Withdrawals</div>
@@ -137,12 +165,52 @@
         </div>
     </div>
 
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Set token contract</div>
+            <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Contract address</span>
+                    </div>
+                    <input type="text" class="form-control" data-bind="value: tokenContractAddress"/>
+            </div>
+            </br>
+            <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: setTokenContractAddress }">Set token contract address</button>
+        </div>
+    </div>
 
+    <div class="card">
+        <div class="card-body">
+            <div class="card-title">Issue tokens</div>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Recipient address</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: tokenRecipientAddress"/>
+            </div>
+            </br>            
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">No of tokens</span>
+                </div>
+                <input type="text" class="form-control" data-bind="value: tokenAmountToIssue"/>
+            </div> 
+            </br>
+            <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: issueTokens}">Check payment</button>  
+        </br>
+            <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: getTokenIssueEvents}">Check token issue events</button> 
+        </br>
+        <button type="button" class="btn btn-outline-secondary" data-bind="event: { click: getBalance}">Check token balance</button>            
+        </div>
+    </div>    
 
 </div>
 
     <script>      
             var gatewayyy;
+            const paymentContractAddress = "0xfb84392134924982cf29bc3a05bcea8c2090cbdc";
+            const tokenContractAddress = "0xeb5e4bb110e14b66b5a020bf29c1dc2cdd158809";
+
 
             function EthPaymentGatewayViewModel(){
                 var self = this;
@@ -156,8 +224,14 @@
                 self.txHash = ko.observable("");
                 self.lookupMerch = ko.observable("")
                 self.lookupRef = ko.observable("")
+                self.tokenContractAddress = ko.observable("");
+                self.tokenRecipientAddress = ko.observable("");
+                self.tokenAmountToIssue = ko.observable(0);
+                self.tokenPaymentAddress = ko.observable("");
+                self.tokenPaymentRef = ko.observable("");
+                self.noOfTokens = ko.observable(0);
 
-                self.gateway = new EthPaymentGatewayLib.EthPaymentGateway("http://localhost:7545", "0x4cd2fe7b0b2edfcc9847c02b6a3ddeaa00ad5982");
+                self.gateway = new EthPaymentGatewayLib.EthPaymentGateway("http://localhost:7545", paymentContractAddress);
                 gatewayyy = self.gateway;
 
                 self.calculatePrice = async function(){
@@ -212,6 +286,40 @@
                     console.log("getting gateway withdrawal history...");
                     let withdrawals = await self.gateway.getGatewayWithdrawalHistory();
                     console.log(withdrawals);
+                }
+
+                self.setTokenContractAddress = async function(){
+                    console.log("setting token contract address");
+                    let addressSet = await self.gateway.setTokenContractAddress(tokenContractAddress);
+                    let ethPaymentGatewayToken = new EthPaymentGatewayLib.EthPaymentGatewayToken("http://localhost:7545", tokenContractAddress);
+                    let setpaymentresult = await ethPaymentGatewayToken.setPaymentContractAddress(paymentContractAddress);
+                    console.log("contract address set");                    
+                }
+
+                self.issueTokens = async function(){
+                    console.log("issue tokens");
+                    let tokenIssue = await self.gateway.issueTokens(self.tokenRecipientAddress(), self.tokenAmountToIssue());
+                    console.log("tokens issued");
+                }
+
+                self.getTokenIssueEvents = async function(){
+                    console.log("token issue events..");
+                    let ethPaymentGatewayToken = new EthPaymentGatewayLib.EthPaymentGatewayToken("http://localhost:7545",tokenContractAddress);
+                    let events = await ethPaymentGatewayToken.getTokenIssueEvents();
+                    console.log(events);
+                }
+
+                self.getBalance = async function(){
+                    console.log("Get balance...");
+                    let ethPaymentGatewayToken = new EthPaymentGatewayLib.EthPaymentGatewayToken("http://localhost:7545", tokenContractAddress);
+                    let bal = await ethPaymentGatewayToken.getBalance(self.tokenRecipientAddress());
+                    console.log(bal);
+                }
+
+                self.makePaymentUsingTokens = async function(){
+                    console.log("pay with tokens...");
+                    let result = await self.gateway.makePaymentUsingTokens(self.tokenPaymentAddress(), self.tokenPaymentRef(), self.noOfTokens());
+                    console.log(result);
                 }
             }
             

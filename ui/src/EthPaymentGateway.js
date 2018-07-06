@@ -9,8 +9,15 @@ export class EthPaymentGateway{
     async makePayment(merchant, ether, reference){
         let contract = await this.getContract();
         let priceInWei = this.web3Instance.toWei(ether, 'ether');
+        console.log("ref:" + reference);
         var result = await contract.makePayment(merchant, reference, {value : priceInWei});
         return result;
+     }
+
+     async makePaymentUsingTokens(merchant, reference, tokenAmount){
+        let contract = await this.getContract();
+        var result = await contract.makePaymentInTokens(merchant, reference, tokenAmount);
+        return result;      
      }
 
      async getPaymentStatusFromMerchantAndReference(merchant, reference){
@@ -40,6 +47,19 @@ export class EthPaymentGateway{
     /*
         Admin
     */
+
+    async setTokenContractAddress(address){
+        let contract = await this.getContract();
+        console.log("set token contract address to:" + address);
+        var result = await contract.setTokenContract(address);
+        return result;        
+    }
+
+    async issueTokens(address, amount){
+        let contract = await this.getContract();
+        var result = await contract.issueTokens(address, amount);
+        return result;          
+    }
 
     async addMerchant(address, name){
         console.log("add merchant");
@@ -181,4 +201,64 @@ const EventType = {
     PaymentMadeEvent: "PaymentMadeEvent",
     WithdrawGatewayFundsEvent: "WithdrawGatewayFundsEvent",
     WithdrawPaymentEvent: "WithdrawPaymentEvent"  
+}
+
+export class EthPaymentGatewayToken{
+    constructor(network, contractAddress){
+        this.web3Instance = new Web3(new Web3.providers.HttpProvider(network));
+        this.contractAddress = contractAddress;
+        this.contractAbiUrl = "http://127.0.0.1/src/erc20-contract-abi.json";
+    }  
+
+    async getContract(){
+        this.contractAbi = await this.getContractAbi();
+        var contract = await this.web3Instance.eth.contract(this.contractAbi).at(this.contractAddress);
+        return contract;
+    }    
+
+    async getContractAbi(){
+        let response = await fetch(this.contractAbiUrl);
+        let data = await response.json();
+        return data.abi;
+    }    
+    
+    async issueTokens(address, amount){
+        let contract = await this.getContract();
+        var result = await contract.issueTokens(address, amount);
+        return result;          
+    }    
+
+    async getTokenIssueEvents(){
+        let contract = await this.getContract();
+        let eventsCallback = this.promisify(cb => contract.IssueTokens({}, { fromBlock: 0, toBlock: 'latest' }).get(cb));
+
+        let events = await eventsCallback;
+        return events;          
+    }  
+
+    async getBalance(address){
+        let contract = await this.getContract();        
+        var result = await contract.balanceOf(address);
+        return result;
+    }
+
+    async setPaymentContractAddress(address){
+        let contract = await this.getContract();
+        var result = await contract.setPaymentGatewayAddress(address);
+        return result;
+    }
+
+
+    
+    promisify(inner){
+        return new Promise((resolve, reject) =>
+                    inner((err, res) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(res);
+                        }
+                    })
+        ); 
+    }    
 }
